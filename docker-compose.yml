@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  fakegcs:
+    image: fsouza/fake-gcs-server:latest
+    environment:
+      - GCS_BUCKET_NAME=my-fake-gcs-bucket
+    ports:
+      - "4443:4443"
+    volumes:
+      - fakegcs-data:/data
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mlpipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  ml-pipeline:
+    image: kubeflowpipelines/api-server:1.8.9
+    environment:
+      - ML_PIPELINE_DB_HOST=postgres
+      - ML_PIPELINE_DB_NAME=mlpipeline
+      - ML_PIPELINE_DB_USER=root
+      - ML_PIPELINE_DB_PASSWORD=password
+      - ML_PIPELINE_DB_PORT=5432
+      - ML_PIPELINE_PERSISTENCE_MODE=postgresql
+      - GCS_ENDPOINT=http://fakegcs:4443
+      - GCS_BUCKET=my-fake-gcs-bucket
+    ports:
+      - "8888:8888"
+    depends_on:
+      - postgres
+      - fakegcs
+    volumes:
+      - ./pipeline:/pipeline
+
+volumes:
+  fakegcs-data:
+  postgres-data:
